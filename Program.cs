@@ -1,6 +1,3 @@
-using System.Threading.Tasks;
-using Wordle.Game;
-
 namespace Wordle.Main
 {
 	static class Program
