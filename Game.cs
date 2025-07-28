@@ -1,171 +1,183 @@
-﻿using System.Text.Json;
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
 using System.Linq;
-namespace Wordle.Game;
+using System.Threading;
 
-public class Game
+namespace Wordle.Game
 {
-	private const string URL = $"https://al0ha0.github.io/Wordle/db.json";
-	private static Dictionary<string, List<string>>? WordsDictionary = new();
-	
-	public static async Task Start()
-	{
-		await Request();
-		if (WordsDictionary is null)
-		{
-			Console.WriteLine("FAILED TO LOAD DATA!!!");
-		}
-		else
-		{
-			Loop();
-		}
-
-	}
-	
-	private static string? RandomWord(string? Gamemode)
-	{
-		Random rand = new();
-		if (Gamemode != null)
-			return WordsDictionary?[$"{Gamemode}_letter_nouns"][rand.Next(WordsDictionary[$"{Gamemode}_letter_nouns"].Count)];
-		return null;
-	}
-	
-	private static void PlayRound(string WORD, string MODE)
-{
-    int LetterAmt = int.Parse(MODE);
-    int MAXGuesses = 8;
-    bool correctguess = false;
-
-    string[] CorrectChars = new string[LetterAmt];
-    List<string> PresentLetters = new(); // stores letters that are in the word (wrong place)
-
-    for (int i = 0; i < LetterAmt; i++)
-        CorrectChars[i] = " ";
-
-    for (int guessCount = 1; guessCount <= MAXGuesses && !correctguess; guessCount++)
+    public class Game
     {
-        while (true)
+        private const string Url = $"https://al0ha0.github.io/Wordle/db.json";
+        private static Dictionary<string, List<string>>? wordsDictionary = new();
+
+        public static async Task Start()
         {
-            Console.Clear();
-            Console.WriteLine("Wordle Console Edition");
-            Console.Write("Word: ");
-            for (int j = 0; j < LetterAmt; j++)
-                Console.Write($"[{CorrectChars[j]}]");
-
-            Console.WriteLine();
-            if (PresentLetters.Any())
+            await Request();
+            if (wordsDictionary is null)
             {
-                var distinct = PresentLetters.Select(c => c.ToUpper()).Distinct();
-                Console.WriteLine($"{string.Join(" ", distinct)} are also in the word!");
+                Console.WriteLine("❌ FAILED TO LOAD DATA!!!");
+                return;
             }
 
-            Console.WriteLine($"Guess {guessCount}/{MAXGuesses}");
-            Console.Write("Enter a Word: ");
-            string? guess = Console.ReadLine()?.ToLower();
+            Loop();
+        }
 
-            if (string.IsNullOrWhiteSpace(guess) || guess.Length != LetterAmt)
-            {
-                Console.WriteLine("Invalid input length.");
-                continue;
-            }
+        private static string? RandomWord(string? gamemode)
+        {
+            if (gamemode is null || wordsDictionary is null) return null;
+            string key = $"{gamemode}_letter_nouns";
+            if (!wordsDictionary.ContainsKey(key) || wordsDictionary[key].Count == 0)
+                return null;
 
-            if (!IsExistingWord(guess, MODE))
-            {
-                Console.WriteLine("Invalid Word.");
-                continue;
-            }
+            Random rand = new();
+            return wordsDictionary[key][rand.Next(wordsDictionary[key].Count)];
+        }
 
-            if (guess == WORD)
-            {
-                Console.WriteLine("YOU WON!!!");
-                correctguess = true;
-                break;
-            }
+        private static void PlayRound(string word, string mode)
+        {
+            int letterAmt = int.Parse(mode);
+            int maxGuesses = 8;
+            bool correctGuess = false;
 
-            for (int k = 0; k < LetterAmt; k++)
+            string[] correctChars = Enumerable.Repeat(" ", letterAmt).ToArray();
+            List<string> presentLetters = new();
+            List<string> history = new();
+
+            for (int guessCount = 1; guessCount <= maxGuesses && !correctGuess; guessCount++)
             {
-                if (WORD[k] == guess[k])
+                Console.WriteLine($"\nWordle Console Edition - Guess {guessCount}/{maxGuesses}");
+                Console.Write("Word: ");
+                foreach (var ch in correctChars)
+                    Console.Write($"[{ch}]");
+                Console.WriteLine();
+
+                if (presentLetters.Any())
+                    Console.WriteLine($"Also present (wrong place): {string.Join(" ", presentLetters.Distinct().Select(c => c.ToUpper()))}");
+
+                Console.Write("Enter your guess: ");
+                string? guess = Console.ReadLine()?.ToLower();
+
+                if (string.IsNullOrWhiteSpace(guess) || guess.Length != letterAmt)
                 {
-                    CorrectChars[k] = WORD[k].ToString();
-                    Console.WriteLine($"'{CorrectChars[k]}' is correct.");
+                    Console.WriteLine("❗ Invalid input length. Try again.");
+                    guessCount--;
+                    continue;
                 }
-                else if (WORD.Contains(guess[k]))
+
+                if (!IsExistingWord(guess, mode))
                 {
-                    string ch = guess[k].ToString();
-                    if (!PresentLetters.Contains(ch)) PresentLetters.Add(ch);
-                    Console.WriteLine($"'{ch}' is in the word, wrong place.");
+                    Console.WriteLine($"❗ '{guess}' is not a valid word in dictionary.");
+                    guessCount--;
+                    continue;
+                }
+
+                history.Add(guess);
+
+                if (guess == word)
+                {
+                    Console.WriteLine($"🎉 YOU WON! The word was: {word.ToUpper()}");
+                    correctGuess = true;
+                    break;
+                }
+
+                for (int i = 0; i < letterAmt; i++)
+                {
+                    if (word[i] == guess[i])
+                        correctChars[i] = word[i].ToString();
+                    else if (word.Contains(guess[i]) && !presentLetters.Contains(guess[i].ToString()))
+                        presentLetters.Add(guess[i].ToString());
+                }
+
+                Console.WriteLine($"❌ Incorrect. Guesses so far:");
+                foreach (string g in history)
+                {
+                    string display = "";
+                    for (int i = 0; i < letterAmt; i++)
+                    {
+                        if (g[i] == word[i]) display += $"[{char.ToUpper(g[i])}]";
+                        else if (word.Contains(g[i])) display += $"({g[i]})";
+                        else display += $" {g[i]} ";
+                    }
+                    Console.WriteLine(display);
                 }
             }
 
-            Console.WriteLine("Oopsie! You didn't guess the word.");
-            Thread.Sleep(1500); // small pause for user feedback
-            break;
+            if (!correctGuess)
+                Console.WriteLine($"💀 Game over! The word was: {word.ToUpper()}");
+        }
+
+        private static bool IsExistingWord(string word, string mode)
+        {
+            string key = $"{mode}_letter_nouns";
+            return wordsDictionary != null &&
+                   wordsDictionary.ContainsKey(key) &&
+                   wordsDictionary[key].Contains(word);
+        }
+
+        private static void Loop()
+        {
+            bool exit = false;
+            while (!exit)
+            {
+                Console.WriteLine("\nWould you like to play? (y/n)");
+                string? response = Console.ReadLine()?.Trim().ToLower();
+
+                switch (response)
+                {
+                    case "y":
+                    case "yes":
+                        Console.WriteLine("Choose a Gamemode (4 / 5 / 6 letters):");
+                        string? modeInput = Console.ReadLine();
+
+                        if (modeInput == "4" || modeInput == "5" || modeInput == "6")
+                        {
+                            string? word = RandomWord(modeInput);
+                            if (word != null)
+                            {
+                                Console.WriteLine($"Starting {modeInput}-letter game...\n");
+                                PlayRound(word, modeInput);
+                            }
+                            else
+                            {
+                                Console.WriteLine("❗ No words found for that mode.");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("❗ Invalid gamemode.");
+                        }
+                        break;
+
+                    case "n":
+                    case "no":
+                        exit = true;
+                        break;
+
+                    default:
+                        Console.WriteLine("❗ Invalid response. Type 'y' or 'n'.");
+                        break;
+                }
+            }
+        }
+
+        private static async Task Request()
+        {
+            using HttpClient client = new();
+            try
+            {
+                var response = await client.GetAsync(Url);
+                response.EnsureSuccessStatusCode();
+                string json = await response.Content.ReadAsStringAsync();
+                wordsDictionary = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json);
+                Console.WriteLine("✅ Words loaded successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error loading dictionary: {ex.Message}");
+            }
         }
     }
-
-    if (!correctguess)
-        Console.WriteLine($"Game over! The word was: {WORD.ToUpper()}");
-}
-
-
-	private static bool IsExistingWord(string WORD, string MODE) => WordsDictionary[$"{MODE}_letter_nouns"].Contains(WORD);
-	
-	private static void Loop()
-	{
-		bool Exit = false;
-		while (!Exit)
-		{
-			Console.WriteLine("Would you like to Play? (y/n)");
-			string? Response = Console.ReadLine();
-			
-				switch (Response)
-				{
-					case "y":
-					case "yes":
-						Console.WriteLine("Choose a Gamemode(4/5/6)\n4-Letter\n5-Letter\n6-Letter");
-						string? modeInput = Console.ReadLine();
-						if (modeInput != null && (modeInput == "4" || modeInput == "5" || modeInput == "6"))
-						{
-							string? word = RandomWord(modeInput);
-
-							if (word != null)
-							{
-								Console.WriteLine($"Starting game with {modeInput}-letter word.");
-								PlayRound(word, modeInput);
-							}
-							else
-							{
-								Console.WriteLine("Sorry, no words available for that gamemode.");
-							}
-						}
-						else
-						{
-							Console.WriteLine("Invalid gamemode selected.");
-						}
-						break;
-					case "no":
-					case "n":
-						Exit = true;
-						break;
-					default:
-						Console.WriteLine("Invalid response!");
-						break;
-				}
-
-		}
-	}
-	private static async Task Request()
-	{
-		using HttpClient client = new();
-		try
-		{
-			var response = await client.GetAsync(URL);
-			response.EnsureSuccessStatusCode();
-			string responseString = await response.Content.ReadAsStringAsync();
-			WordsDictionary = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(responseString);
-		}
-		catch (Exception e)
-		{
-			Console.WriteLine(e.Message);
-		}
-	}
 }
