@@ -1,10 +1,13 @@
-﻿using Wordle.Game;
-namespace Wordle.Main;
+using System.Threading.Tasks;
+using Wordle.Game;
 
-static class Program
+namespace Wordle.Main
 {
-	private static async Task Main()
+	static class Program
 	{
-		await Game.Game.Start();
+		private static async Task Main()
+		{
+			await Game.Game.Start();
+		}
 	}
 }
