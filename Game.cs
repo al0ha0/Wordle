@@ -18,7 +18,7 @@ namespace Wordle.Game
             await Request();
             if (wordsDictionary is null)
             {
-                Console.WriteLine("❌ FAILED TO LOAD DATA!!!");
+                Console.WriteLine("FAILED TO LOAD DATA!!!");
                 return;
             }
 
@@ -62,14 +62,14 @@ namespace Wordle.Game
 
                 if (string.IsNullOrWhiteSpace(guess) || guess.Length != letterAmt)
                 {
-                    Console.WriteLine("❗ Invalid input length. Try again.");
+                    Console.WriteLine("Invalid input length. Try again.");
                     guessCount--;
                     continue;
                 }
 
                 if (!IsExistingWord(guess, mode))
                 {
-                    Console.WriteLine($"❗ '{guess}' is not a valid word in dictionary.");
+                    Console.WriteLine($"'{guess}' is not a valid word in dictionary.");
                     guessCount--;
                     continue;
                 }
@@ -78,7 +78,7 @@ namespace Wordle.Game
 
                 if (guess == word)
                 {
-                    Console.WriteLine($"🎉 YOU WON! The word was: {word.ToUpper()}");
+                    Console.WriteLine($"YOU WON! The word was: {word.ToUpper()}");
                     correctGuess = true;
                     break;
                 }
@@ -91,7 +91,7 @@ namespace Wordle.Game
                         presentLetters.Add(guess[i].ToString());
                 }
 
-                Console.WriteLine($"❌ Incorrect. Guesses so far:");
+                Console.WriteLine($"Incorrect. Guesses so far:");
                 foreach (string g in history)
                 {
                     string display = "";
@@ -106,7 +106,7 @@ namespace Wordle.Game
             }
 
             if (!correctGuess)
-                Console.WriteLine($"💀 Game over! The word was: {word.ToUpper()}");
+                Console.WriteLine($"Game over! The word was: {word.ToUpper()}");
         }
 
         private static bool IsExistingWord(string word, string mode)
@@ -142,12 +142,12 @@ namespace Wordle.Game
                             }
                             else
                             {
-                                Console.WriteLine("❗ No words found for that mode.");
+                                Console.WriteLine("No words found for that mode.");
                             }
                         }
                         else
                         {
-                            Console.WriteLine("❗ Invalid gamemode.");
+                            Console.WriteLine("Invalid gamemode.");
                         }
                         break;
 
@@ -157,7 +157,7 @@ namespace Wordle.Game
                         break;
 
                     default:
-                        Console.WriteLine("❗ Invalid response. Type 'y' or 'n'.");
+                        Console.WriteLine("Invalid response. Type 'y' or 'n'.");
                         break;
                 }
             }
@@ -172,11 +172,11 @@ namespace Wordle.Game
                 response.EnsureSuccessStatusCode();
                 string json = await response.Content.ReadAsStringAsync();
                 wordsDictionary = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json);
-                Console.WriteLine("✅ Words loaded successfully.");
+                Console.WriteLine("Words loaded successfully.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error loading dictionary: {ex.Message}");
+                Console.WriteLine($"!Error loading dictionary: {ex.Message}");
             }
         }
     }
